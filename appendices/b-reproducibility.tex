@@ -7,7 +7,8 @@ Flutter. Dependency definitions and scripts in the project repositories support
 deterministic re-runs.
 
 \section{Deployment}
-The RAG service is deployed on a Kaggle T4 GPU and exposed to the mobile app through an
+The RAG service is deployed on a RunPod RTX A5000 instance and exposed to the mobile
+app through an
 ngrok tunnel; the detector ships as a TensorFlow Lite asset bundled with the Flutter
 app. No container image is required for the deployed path.
 
@@ -30,7 +31,8 @@ Table~\ref{tab:hardware} reports the hardware used for each role.
 \midrule
 Detector training & NVIDIA GTX 1650 Ti (4\,GB) & Ultralytics 8.4.45 / PyTorch; $\sim$34\,h GPU $+$ $\sim$40\,h hand annotation.\\
 RAG experiments   & NVIDIA RTX 3050 Laptop (4\,GB), 16\,GB RAM & Ollama (CUDA), Flash Attention enabled.\\
-Production serving & Kaggle T4 GPU $+$ ngrok & FastAPI RAG service.\\
+Production serving & RunPod NVIDIA RTX A5000 (24\,GB VRAM) $+$ ngrok & FastAPI RAG
+service; 9 vCPU (Intel Xeon Gold 6342 @ 2.80\,GHz), 50\,GB RAM, 30\,GB storage.\\
 \bottomrule
 \end{tabularx}
 \end{table}

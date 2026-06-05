@@ -216,7 +216,8 @@ context window ($1024\rightarrow4096$), and an augmented-prompt fallback.
 
 The pipeline is exposed through a FastAPI server providing \texttt{/ask},
 \texttt{/ask/stream} (token streaming), \texttt{/artifact/\{id\}} (structured metadata),
-and \texttt{/health}. It runs on a Kaggle T4 GPU and is reached from the app over an
+and \texttt{/health}. It runs on a RunPod-hosted NVIDIA RTX A5000 instance (24\,GB
+VRAM, 50\,GB RAM, 9 vCPUs) and is reached from the app over an
 ngrok tunnel (Figure~\ref{fig:deploy}). At startup the server loads the ChromaDB
 collections, reconstructs the indexes, and pre-warms the model so the first visitor
 request is already at warm-cache speed.
@@ -225,16 +226,16 @@ request is already at warm-cache speed.
 \centering
 \begin{tikzpicture}[node distance=12mm and 20mm]
   \node[block] (app) {Flutter App};
-  \node[block,right=of app] (api) {FastAPI (Kaggle T4)};
+  \node[block,right=of app] (api) {FastAPI (RunPod A5000)};
   \node[block,right=of api] (gemma) {Ollama\\ Gemma 4 E2B (Q4)};
   \node[store,below=of api] (chroma) {ChromaDB\\\scriptsize EN/AR};
   \draw[flow] (app) -- node[above,font=\scriptsize]{ngrok / HTTPS} (api);
   \draw[flow] (api) -- node[above,font=\scriptsize]{prompt} (gemma);
   \draw[flow] (api) -- node[right,font=\scriptsize]{retrieve} (chroma);
 \end{tikzpicture}
-\caption{Deployment path: the app reaches the FastAPI RAG service (on a Kaggle T4 GPU)
-through an ngrok tunnel; the service retrieves from ChromaDB and prompts a local Gemma
-model.}
+\caption{Deployment path: the app reaches the FastAPI RAG service (on a RunPod
+RTX A5000 GPU) through an ngrok tunnel; the service retrieves from ChromaDB and
+prompts a local Gemma model.}
 \label{fig:deploy}
 \end{figure}
 

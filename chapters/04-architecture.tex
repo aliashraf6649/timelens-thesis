@@ -40,24 +40,73 @@ model.}
 
 \section{Layered System Architecture}
 
-Viewed as horizontal layers (Figure~\ref{fig:layers}), the separation of concerns
-becomes explicit: each layer communicates with its neighbours through a stable
-contract, and \emph{grounding} is the cross-cutting guarantee that generation is
-constrained to retrieved museum data.
+Viewed as layers (Figure~\ref{fig:layers}), the separation of concerns becomes
+explicit. The experience layer fans out into two independent paths: an
+\emph{on-device path}, where detection resolves artifact identity and metadata
+with no network dependency, and a \emph{service path}, where a chat question
+crosses HTTPS/ngrok once to the FastAPI endpoints fronting the knowledge layer.
+Each boundary is a stable contract, and both paths terminate in the same
+canonical dataset, so \emph{grounding}---constraining generation to retrieved
+museum data---holds by construction.
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[node distance=4mm,every node/.style={font=\small}]
-  \node[block,minimum width=0.8\textwidth] (l1) {Experience Layer (Flutter UI + camera overlay, bilingual)};
-  \node[block,minimum width=0.8\textwidth,below=of l1] (l2) {On-Device Detection Layer (YOLOv8n, TFLite, end-to-end NMS)};
-  \node[edgenode,minimum width=0.8\textwidth,below=of l2] (l3) {Knowledge \& RAG Layer (ChromaDB retrieval + Gemma 4 E2B via Ollama)};
-  \node[block,minimum width=0.8\textwidth,below=of l3] (l4) {Service Layer (FastAPI: \texttt{/ask}, \texttt{/artifact}, \texttt{/health})};
-  \node[store,minimum width=0.8\textwidth,below=of l4] (l5) {Data Layer (108-record bilingual KB; on-device preferences)};
-  \foreach \a/\b in {l1/l2,l2/l3,l3/l4,l4/l5}{\draw[{Stealth[]}-{Stealth[]},thick] (\a) -- (\b);}
-  \node[rotate=90,anchor=south,font=\footnotesize\bfseries] at ([xshift=-3mm]$(l1.west)!0.5!(l5.west)$) {Grounding};
+\begin{tikzpicture}[every node/.style={font=\small}]
+  % column layers
+  \node[block,text width=50mm,minimum height=11mm] (det) at (0,0)
+    {On-Device Detection Layer\\[1pt]\scriptsize YOLOv8n, TFLite, end-to-end NMS};
+  \node[block,text width=54mm,minimum height=11mm] (svc) at (7.4,0)
+    {Chatbot Service Layer\\[1pt]\scriptsize FastAPI: \texttt{/ask}, \texttt{/artifact}, \texttt{/health}};
+  \node[edgenode,text width=54mm,minimum height=11mm] (rag) at (7.4,-2.6)
+    {Knowledge \& RAG Layer\\[1pt]\scriptsize ChromaDB retrieval $+$ Gemma 4 E2B (Q4) via Ollama};
+  % spanning layers
+  \node[block,text width=127mm,minimum height=11mm] (exp) at (3.7,2.3)
+    {Experience Layer\\[1pt]\scriptsize Flutter UI, camera overlay, bilingual EN/AR, voice playback};
+  \node[store,text width=127mm,minimum height=11mm] (data) at (3.7,-5.8)
+    {Data Layer: one canonical 108-record bilingual KB\\[1pt]\scriptsize
+     bundled JSON (on-device) $=$ ChromaDB \texttt{gem\_en}/\texttt{gem\_ar} (backend);
+     preferences on-device};
+  % backend boundary
+  \begin{scope}[on background layer]
+    \node[draw=gemobsidian!45,dashed,rounded corners=4pt,inner sep=3mm,
+          fit=(svc)(rag)] (bk) {};
+  \end{scope}
+  \node[font=\scriptsize\itshape,text=gemobsidian!75,anchor=north west,align=left]
+    at ([yshift=-0.5mm]bk.south west) {backend\\(RunPod A5000)};
+  \node[font=\scriptsize\itshape,text=gemobsidian!75,anchor=north west]
+    at ([yshift=-0.5mm]det.south west) {on-device};
+  % layer contracts: requests flow down, responses flow up
+  \draw[flow] ($(exp.south -| det)+(-2.5mm,0)$) -- node[left,font=\scriptsize]{frames}
+              ($(det.north)+(-2.5mm,0)$);
+  \draw[flow] ($(det.north)+(2.5mm,0)$) -- node[right,font=\scriptsize]{boxes}
+              ($(exp.south -| det)+(2.5mm,0)$);
+  \draw[flow] ($(exp.south -| svc)+(-2.5mm,0)$) -- node[left,align=right,font=\scriptsize]
+              {question\\ \textit{HTTPS / ngrok}} ($(svc.north)+(-2.5mm,0)$);
+  \draw[flow] ($(svc.north)+(2.5mm,0)$) -- node[right,font=\scriptsize]{answer}
+              ($(exp.south -| svc)+(2.5mm,0)$);
+  \draw[flow] ($(det.south)+(-2.5mm,0)$) -- node[left,font=\scriptsize]{label}
+              ($(data.north -| det)+(-2.5mm,0)$);
+  \draw[flow] ($(data.north -| det)+(2.5mm,0)$) -- node[right,font=\scriptsize]{metadata}
+              ($(det.south)+(2.5mm,0)$);
+  \draw[flow] ($(svc.south)+(-2.5mm,0)$) -- node[left,font=\scriptsize]
+              {question $+$ \texttt{artifact\_id}} ($(rag.north)+(-2.5mm,0)$);
+  \draw[flow] ($(rag.north)+(2.5mm,0)$) -- node[right,font=\scriptsize]{grounded answer}
+              ($(svc.south)+(2.5mm,0)$);
+  \draw[flow] ($(rag.south)+(-2.5mm,0)$) -- node[left,font=\scriptsize,pos=0.75]{query}
+              ($(data.north -| rag)+(-2.5mm,0)$);
+  \draw[flow] ($(data.north -| rag)+(2.5mm,0)$) -- node[right,font=\scriptsize,pos=0.25]{records EN/AR}
+              ($(rag.south)+(2.5mm,0)$);
+  % grounding guarantee on the generative path
+  \node[rotate=-90,anchor=center,font=\footnotesize\bfseries]
+    at (11.3,-2.9) {Grounding};
 \end{tikzpicture}
-\caption{Layered architecture. Each layer is governed by a stable contract; ``grounding''
-is the cross-cutting guarantee that generation is constrained to retrieved museum data.}
+\caption{Layered architecture. Downward arrows carry requests, upward arrows the
+responses. The experience layer fans out into two independent
+paths: detection and metadata lookup resolve entirely on-device, while a chat
+question crosses the network once (HTTPS/ngrok) to the FastAPI service fronting
+the RAG engine. Both paths draw on the same canonical 108-record bilingual
+dataset---bundled as JSON on the device, indexed as ChromaDB collections on the
+backend---and ``grounding'' constrains generation to that retrieved museum data.}
 \label{fig:layers}
 \end{figure}
 
@@ -191,7 +240,8 @@ device, and no per-frame data is logged remotely.
         Gemma 4 E2B (Q4\_K\_M); ChromaDB vector store; multilingual MiniLM embeddings.
   \item \textbf{Detector training:} Ultralytics 8.4.45 / PyTorch; YOLO-World for
         auto-annotation; Roboflow for hand annotation.
-  \item \textbf{Serving / infrastructure:} Kaggle T4 GPU exposed via an ngrok tunnel.
+  \item \textbf{Serving / infrastructure:} RunPod-hosted NVIDIA RTX A5000
+        (24\,GB VRAM) exposed via an ngrok tunnel.
 \end{itemize}
 
 \section{Gemma Integration and Grounding}
@@ -208,7 +258,7 @@ path.
 \section{Production Deployment Strategy}
 
 The deployment defines clear boundaries between the mobile edge (on-device detection
-and UI) and the knowledge backend (FastAPI RAG on a Kaggle T4 GPU, exposed via ngrok).
+and UI) and the knowledge backend (FastAPI RAG on a RunPod RTX A5000, exposed via ngrok).
 This separation keeps the visitor-facing experience responsive and lets the knowledge
 base and model evolve without an app release.
 
