@@ -1,0 +1,22 @@
+\chapter{Generative AI Disclosure}
+
+\section{Tool Inventory}
+Generative-AI assistance (GitHub Copilot and related large-language-model tools) was
+used for drafting support, boilerplate acceleration, and editing suggestions across the
+code and this document.
+
+\section{Usage Scope}
+GenAI was used for drafting and revision support. Core design choices, the experimental
+protocol, the data-quality iteration, model selection, and all reported results remained
+human-led.
+
+\section{Verification Statement}
+All AI-assisted text and code suggestions were manually reviewed, corrected where
+necessary, and validated against repository evidence (training runs, evaluation
+artifacts, and the RAG benchmark) before acceptance.
+
+\section{Critical Audit Log}
+At least one audit cycle is recorded in which a generated suggestion was inaccurate and
+corrected before inclusion: an early draft described the detector as ``YOLOv11'' and the
+vector store as ``FAISS''; both were corrected to the actual YOLOv8n detector and
+ChromaDB store after verification against the training and RAG repositories.

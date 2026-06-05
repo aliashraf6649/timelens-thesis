@@ -1,0 +1,108 @@
+\chapter{Introduction}
+
+\section{Problem Statement}
+
+Fine-grained artifact recognition in museum environments is difficult due to
+background clutter, low-light capture, visual overlap between classes, and open-set
+uncertainty. At the \GEM{} (GEM) the difficulty is acute: the target set contains
+\textbf{51 catalogued artifacts}, many of which are near-identical Ramesside statues
+that differ only in subtle pose, headdress, or accompanying standards. Single-model
+solutions trained on idealized imagery often produce unstable predictions in field
+conditions.
+
+In practical terms, this means the system can appear confident when it should be
+cautious, and uncertain when the visitor expects immediate clarity. A tourist
+standing in front of two visually similar statues does not care about model
+internals; they care about whether the app gives a trustworthy answer quickly, and
+in their own language. This mismatch between academic benchmark success and
+real-world reliability is the true problem addressed by this thesis.
+
+\section{Motivation and Significance}
+
+\TimeLens{} is motivated by practical museum needs: reliable visitor guidance,
+catalogue support, and safe AI--human interaction. The project targets a
+production-ready path where on-device recognition is strong enough to drive a
+downstream knowledge experience without sending every camera frame to the cloud.
+
+The significance is both technical and cultural. Technically, the work advances a
+\emph{label-quality-driven} recipe for fine-grained visual recognition under
+difficult conditions, and a \emph{grounded} bilingual question-answering layer that
+resists fabrication. Culturally, it contributes to accessible heritage
+interpretation by helping visitors understand artifacts in context, in real time,
+and in natural language. The thesis treats this dual objective seriously: high model
+quality without user trust is insufficient, and polished UX without reliable identity
+and grounding is unsafe.
+
+\begin{insightbox}[The TimeLens Vision]
+We don't just recognize artifacts; we unlock their stories. By pairing a compact
+\textbf{on-device detector} with a \textbf{retrieval-grounded Gemma guide}, we turn
+every smartphone into a bilingual curatorial companion.
+\end{insightbox}
+
+\section{Research Gaps, Questions, and Objectives}
+
+\subsection{Research Gaps}
+\begin{itemize}[leftmargin=1.5em]
+  \item Generic detectors trained on web imagery are weak on fine-grained,
+        domain-specific artifacts such as near-identical Ramesside statues.
+  \item On datasets built from video frames, naïve random train/validation splits
+        leak near-duplicate frames across the split and inflate reported accuracy.
+  \item Public-facing museum AI guides hallucinate historical facts when generation
+        is not grounded in curated data, and frequently handle Arabic poorly.
+\end{itemize}
+
+\subsection{Research Questions}
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{RQ1.} Can label-quality iteration (auto-annotation $\rightarrow$
+        cleaning $\rightarrow$ hand-annotation) yield a compact on-device detector
+        that reliably distinguishes 51 fine-grained Egyptian artifacts?
+  \item \textbf{RQ2.} Can a retrieval-grounded, locally-served language model deliver
+        factual, bilingual (English/Arabic) museum answers at interactive latency?
+  \item \textbf{RQ3.} Can the combined system run on commodity phones and a single
+        small GPU, making it suitable for real museum deployment?
+\end{itemize}
+
+\subsection{Objectives}
+\begin{itemize}[leftmargin=1.5em]
+  \item Build and evaluate a compact, leakage-aware on-device artifact detector
+        (YOLOv8n) exported to TensorFlow Lite.
+  \item Build a grounded bilingual RAG guide (ChromaDB retrieval + Gemma 4 E2B
+        generation) served behind a FastAPI interface.
+  \item Integrate both in a Flutter application and document the market relevance of
+        AR plus deep learning for heritage technology.
+\end{itemize}
+
+\section{Proposed Solution Overview}
+
+\TimeLens{} splits cleanly into an on-device perception layer and a grounded
+knowledge layer. On the phone, a compact \textbf{YOLOv8n} detector---exported to
+TensorFlow Lite with end-to-end non-maximum suppression---runs on the live camera
+feed and classifies the framed exhibit as one of 51 catalogued artifacts, drawing a
+tracking box in real time. Because the detector was trained on clean, hand-verified
+labels, its confidence is well calibrated: real artifacts score high while off-target
+scenes fall below a rejection threshold, so the app can \textbf{trust the on-device
+label directly} without a per-frame network round-trip. When the visitor taps a
+confident detection, the app opens the artifact's information and a conversational
+guide; views that fall below the per-class confidence threshold produce no overlay at
+all, so the app simply keeps scanning rather than guessing.
+
+The conversational guide is a bilingual Retrieval-Augmented Generation (RAG)
+service. Rather than relying on a language model's parametric memory, it retrieves
+the most relevant entries from a curated 108-record ChromaDB knowledge base and
+passes them to Gemma 4 E2B---served locally through Ollama behind a FastAPI
+endpoint---as grounding context. This keeps every answer anchored to verified museum
+data in the visitor's language (English or Arabic) and structurally limits invented
+historical claims. A backend re-verification of the on-device label is supported by
+the architecture but is not required in the deployed path, where the calibrated
+detector is the source of truth.
+
+\section{Thesis Organization}
+
+The remainder of the thesis is organized as follows. Chapter~2 reviews related work
+in on-device detection, foundation-model auto-annotation, and retrieval-augmented
+generation. Chapter~3 presents the analysis and requirements. Chapter~4 describes the
+deployed system architecture. Chapter~5 is the on-device detection study (the
+data-quality-driven YOLOv8n contribution). Chapter~6 covers the bilingual RAG guide
+and its deployment. Chapter~7 is the market analysis of AR and AI guide systems for
+Egyptian cultural heritage. Chapter~8 concludes and outlines future work. Appendices
+cover ethics, reproducibility, and a generative-AI disclosure.

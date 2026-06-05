@@ -1,0 +1,173 @@
+\chapter{Analysis and Requirements Engineering}
+
+\section{Stakeholder Analysis}
+
+Primary stakeholders include visitors, curators, research engineers, and operations
+teams. Each requires a different quality guarantee: usability, reliability,
+explainability, and maintainability. Visitors prioritize speed and clarity; curators
+emphasize factual integrity and update control; engineers prioritize maintainability
+and reproducibility; leadership focuses on adoption and measurable engagement. A
+system that optimizes only one of these viewpoints tends to fail in operation; hence
+requirements engineering here explicitly balances all four.
+
+\section{Functional Requirements}
+
+\begin{enumerate}[label=\textbf{FR-\arabic*.},leftmargin=3em]
+  \item \textbf{Real-time detection.} Detect and track artifacts in the live camera
+        feed with bounding-box overlays at interactive frame rates.
+  \item \textbf{On-device classification.} Classify a framed artifact as one of the
+        51 catalogued GEM artifacts entirely on-device, with no per-frame network call.
+  \item \textbf{Confidence gating.} A confident detection opens the artifact's
+        information; a view that falls below the per-class confidence threshold is
+        suppressed, so the app keeps scanning instead of guessing.
+  \item \textbf{Artifact information.} Present name, period/dynasty, material, and
+        description, with an original$\rightarrow$restored image toggle where available.
+  \item \textbf{Bilingual AI guide.} Answer artifact-specific and general questions in
+        the user's language, grounded in curated museum data.
+  \item \textbf{Bilingual UI.} Support full English/Arabic switching including
+        right-to-left layout, with the chosen language persisted across sessions.
+  \item \textbf{Text-to-speech.} Optionally read AI replies aloud in the active language.
+  \item \textbf{Photo capture.} Capture and save camera photos to the device gallery.
+  \item \textbf{Museum information and location.} Provide a museum-information screen
+        (hours, location, ticketing, map) with location gating for on-site versus
+        off-site visitors.
+\end{enumerate}
+
+\section{Non-Functional Requirements}
+
+\begin{enumerate}[label=\textbf{NFR-\arabic*.},leftmargin=3.4em]
+  \item \textbf{Latency:} real-time on-device detection (target $\geq 2.5$\,FPS
+        on a mid-tier Android phone) and AI answers within a few seconds.
+  \item \textbf{Footprint:} compact TensorFlow Lite model ($\leq 8$\,MB; actual
+        5.97\,MB), installable on low-storage devices.
+  \item \textbf{Robustness:} tolerate clutter, overlap, oblique angles, and
+        fine-grained confusion among near-identical artifacts.
+  \item \textbf{Privacy/edge:} perform recognition on-device with no per-frame
+        upload; serve the AI backend locally, avoiding any third-party LLM API.
+  \item \textbf{Accessibility:} bilingual content plus text-to-speech audio.
+  \item \textbf{Maintainability/scalability:} modular, independently replaceable
+        services; the knowledge base is updatable without an app release.
+\end{enumerate}
+
+\section{Data Requirements}
+
+\subsection{Data Sources and Acquisition}
+Training data consists of roughly 30{,}000 frames extracted (at about one frame per
+second) from approximately 50 in-gallery videos of GEM artifacts captured before the
+museum's public opening, spanning all 51 classes. This source reflects the real
+deployment domain far better than generic web imagery.
+
+\subsection{Volumetric and Diversity Requirements}
+The dataset must cover class diversity, view diversity, and clutter diversity, with
+balanced per-class representation. Per-class frame counts range from a few hundred to
+just under a thousand, which is reasonably balanced for the task.
+
+\subsection{Annotation and Labeling Standards}
+Annotation consistency, class-map governance, and \emph{leakage-aware} split policies
+are required. Because frames are extracted from continuous video, adjacent frames are
+near-duplicates; splits must therefore be performed \emph{chronologically within each
+class/video group} rather than by random shuffle, to avoid leaking near-identical
+frames across train, validation, and test (see Chapter~5).
+
+\section{App Persona}
+
+To keep design decisions anchored to a concrete user rather than an abstract average,
+we model a representative visitor (Figure~\ref{fig:persona}). Her goals and frustrations
+motivate the system's emphasis on speed, offline robustness, and a low-friction
+scan-to-answer path.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\begin{minipage}{0.9\textwidth}\small
+\vspace{1mm}
+{\large\bfseries Persona: Sarah the Curious Visitor}\\[1mm]
+\textit{32 years old, international tourist, tech-savvy but time-constrained.}\\[2mm]
+\begin{minipage}[t]{0.46\textwidth}
+\textbf{Goals:}
+\begin{itemize}[leftmargin=1.2em,nosep]
+  \item Quickly identify artifacts.
+  \item Learn historical context.
+  \item Interactive discovery.
+\end{itemize}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\textwidth}
+\textbf{Frustrations:}
+\begin{itemize}[leftmargin=1.2em,nosep]
+  \item Weak Wi-Fi in halls.
+  \item Static museum text.
+  \item High app latency.
+\end{itemize}
+\end{minipage}\\[2mm]
+\textit{``I want to point my phone at something and instantly hear its story, like a
+personal digital curator.''}
+\vspace{1mm}
+\end{minipage}}
+\caption{User persona modeling for the \TimeLens{} experience design.}
+\label{fig:persona}
+\end{figure}
+
+\section{Use Case Diagram}
+
+The visitor is the primary actor, and the system exposes three core use cases that map
+directly to the functional requirements (Figure~\ref{fig:usecase}): scanning to
+identify an artifact (FR-01--FR-03), viewing its information (FR-04), and asking the
+bilingual AI guide a question (FR-05). All three are reached from a single camera-first
+screen, keeping the interaction model deliberately small.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=6mm and 28mm]
+  % actor
+  \node (head) at (0,0) [circle,draw,minimum size=5mm] {};
+  \draw (0,-2.5mm)--(0,-12mm);            % body
+  \draw (-5mm,-6mm)--(5mm,-6mm);          % arms
+  \draw (0,-12mm)--(-4mm,-20mm);          % legs
+  \draw (0,-12mm)--(4mm,-20mm);
+  \node (visitor) at (0,-2.5) {\small Visitor};
+  % use cases
+  \node[draw,ellipse,align=center,minimum width=34mm,font=\small] (scan) at (4.2,1.2) {Scan / Identify\\ Artifact};
+  \node[draw,ellipse,align=center,minimum width=34mm,font=\small] (info) at (4.2,-0.3) {View Artifact\\ Information};
+  \node[draw,ellipse,align=center,minimum width=34mm,font=\small] (chat) at (4.2,-1.8) {Ask the AI Guide};
+  % system boundary
+  \begin{scope}[on background layer]
+    \node[draw,dashed,rounded corners,fit=(scan)(info)(chat),inner sep=5mm,label=above:{\small TimeLens Platform}] {};
+  \end{scope}
+  % associations
+  \draw (head) -- (scan);
+  \draw (head) -- (info);
+  \draw (head) -- (chat);
+\end{tikzpicture}
+\caption{Primary use cases for visitor interaction.}
+\label{fig:usecase}
+\end{figure}
+
+\section{Interaction and Data Modeling}
+
+System interactions are organized by actor role. Data modeling focuses on the
+alignment of user sessions, artifact scans, and bilingual content, ensuring
+consistency between the on-device layer and the knowledge backend.
+
+\section{Requirements Traceability Matrix}
+
+Table~\ref{tab:traceability} maps a representative subset of requirements to the
+components that satisfy them and the method used to validate each.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Requirement-to-component mapping.}
+\label{tab:traceability}
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.3cm}@{}}
+\toprule
+\textbf{Req.} & \textbf{Description} & \textbf{Component} & \textbf{Validation}\\
+\midrule
+FR-01 & Live detection $+$ tracking overlay & ARService $+$ TFLiteService (YOLOv8n) & Functional test\\
+FR-02 & On-device 51-class classification & TFLiteService (end-to-end NMS) & Per-class mAP eval\\
+FR-03 & Confident $\rightarrow$ info; sub-threshold $\rightarrow$ suppressed & Home / Scanning logic & End-to-end scenario\\
+FR-05 & Bilingual grounded AI guide & RAG \texttt{/ask} (ChromaDB $+$ Gemma) $+$ ChatDrawer & API integration\\
+FR-06 & EN/AR switch $+$ RTL $+$ persistence & LocaleController $+$ l10n & UI test (both locales)\\
+FR-07 & Text-to-speech replies & \texttt{flutter\_tts} (ChatDrawer) & Functional test\\
+NFR-2 & Compact model $\leq 8$\,MB & YOLOv8n TFLite FP16 (5.97\,MB) & Asset-size check\\
+NFR-4 & On-device privacy / local backend & On-device inference $+$ local Ollama & Architecture review\\
+\bottomrule
+\end{tabularx}
+\end{table}

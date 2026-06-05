@@ -1,0 +1,40 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+This thesis documents the design, implementation, and evaluation of \TimeLens{},
+an AI- and AR-powered mobile guide for the \GEM{} (GEM). Pointing a phone at an
+exhibit, a visitor sees the artifact recognized in real time and can ask follow-up
+questions answered in English or Arabic. The work targets three problems specific
+to in-gallery deployment: fine-grained visual similarity among \textbf{51 catalogued
+artifacts} (many near-identical Ramesside statues), the gap between curated training
+data and handheld phone-camera conditions, and the risk of an AI guide stating
+historical ``facts'' it cannot support.
+
+The thesis presents two engineering-research contributions and a market study. The
+first is an \textbf{on-device artifact detector} developed through a
+data-quality-driven iteration study: from foundation-model auto-annotation
+(YOLO-World), through spatial label-cleaning rules, to a fully hand-annotated
+dataset. The study isolates \emph{label quality}---rather than model architecture or
+input resolution---as the decisive factor: the final \textbf{YOLOv8n} model resolves
+every previously failing class while remaining a \textbf{5.97\,MB} TensorFlow Lite
+asset that runs in real time on a mid-range phone. The second is a \textbf{bilingual
+Retrieval-Augmented Generation (RAG) guide} grounded in a \textbf{108-record ChromaDB}
+knowledge base; a systematic benchmark of \textbf{seven candidate language models}
+selects \textbf{Gemma 4 E2B (Q4\_K\_M)}, and a ten-step optimization reduces
+end-to-end latency from \textbf{over 30\,s to about 10\,s}. Both ship in a production
+\textbf{Flutter} application with a bilingual interface, museum location gating, and
+text-to-speech.
+
+Beyond headline metrics, the thesis is written to be reproducible and honest about
+its limits: the detection study explicitly discloses validation \emph{frame-leakage}
+and the training-to-deployment \emph{domain shift}, reporting a conservative held-out
+result (mAP@0.5 $=0.751$) alongside the in-distribution figures. The document
+includes reproducibility notes, an ethics and bias statement, and a formal
+generative-AI disclosure.
+
+\begin{insightbox}
+A reliable museum guide is built less by adding model complexity than by
+\emph{grounding} it: clean labels make the on-device detector trustworthy, and
+retrieval-grounded generation keeps the language model factual. \TimeLens{}'s value
+comes from disciplined data and grounding, not a larger model.
+\end{insightbox}

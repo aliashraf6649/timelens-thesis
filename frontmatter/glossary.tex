@@ -1,0 +1,19 @@
+\chapter*{Glossary}
+\addcontentsline{toc}{chapter}{Glossary}
+
+\begin{center}
+\begin{tabular}{@{}p{0.32\textwidth}p{0.6\textwidth}@{}}
+\toprule
+\textbf{Term} & \textbf{Definition}\\
+\midrule
+Fine-grained recognition & Classification where classes differ by subtle local details.\\
+Auto-annotation & Generating training labels automatically with a foundation model (here, YOLO-World) instead of by hand.\\
+Frame leakage & Inflated metrics caused by near-duplicate video frames split across train and validation sets.\\
+Domain shift & Performance gap between curated training data and real deployment conditions.\\
+End-to-end NMS & A detector export that performs non-maximum suppression inside the model graph.\\
+Retrieval-Augmented Generation (RAG) & Grounding a language model's answer in passages retrieved from a knowledge base.\\
+Grounding & Constraining generated text to retrieved, verified context to prevent fabrication.\\
+Confidence gate & The per-class threshold that admits a detection (unlocking artifact information and chat) or suppresses it so the app keeps scanning.\\
+\bottomrule
+\end{tabular}
+\end{center}

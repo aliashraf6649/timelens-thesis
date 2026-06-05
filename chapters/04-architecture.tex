@@ -1,0 +1,227 @@
+\chapter{System Architecture and Design}
+
+\section{High-Level Architecture}
+
+The architecture is intentionally split into two layers with a clear boundary. On the
+phone, an \emph{on-device perception layer} turns each camera frame into a tracked,
+classified artifact. A \emph{knowledge layer} then grounds any follow-up question in
+curated museum data before a language model phrases the answer. This framing avoids a
+common failure mode in heritage systems, where a single weak prediction directly
+triggers a confident generated answer.
+
+At the system level, \TimeLens{} separates concerns across five layers: experience,
+on-device detection, knowledge and retrieval, service, and data. Each layer can evolve
+independently behind a stable contract: the detector can be retrained, the knowledge
+base updated, or the language model swapped, without collapsing the end-to-end journey.
+
+\section{High-Level System Block Diagram}
+
+Figure~\ref{fig:block} shows how the two layers connect at runtime. Detection runs
+entirely on the phone; only a chat question crosses the network, reaching the FastAPI
+service that retrieves from ChromaDB and prompts the locally served Gemma model.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=12mm and 20mm]
+  \node[block] (app) {Mobile App (Flutter)\\[1pt]\scriptsize on-device YOLOv8n (TFLite)};
+  \node[block,right=of app] (api) {FastAPI\\ RAG Service};
+  \node[block,right=of api] (gemma) {Ollama\\ Gemma 4 E2B (Q4)};
+  \node[store,below=of api] (chroma) {ChromaDB\\\scriptsize EN/AR collections};
+  \draw[flow] ([yshift=2mm]app.east) -- node[above,font=\scriptsize]{HTTPS / ngrok} ([yshift=2mm]api.west);
+  \draw[flow] ([yshift=-2mm]api.west) -- node[below,font=\scriptsize]{answer} ([yshift=-2mm]app.east);
+  \draw[flow] (api) -- node[above,font=\scriptsize]{prompt} (gemma);
+  \draw[flow] (api) -- node[right,font=\scriptsize]{retrieve} (chroma);
+\end{tikzpicture}
+\caption{System block diagram: detection runs on-device; only chat questions reach the
+FastAPI RAG service, which retrieves from ChromaDB and prompts a locally served Gemma
+model.}
+\label{fig:block}
+\end{figure}
+
+\section{Layered System Architecture}
+
+Viewed as horizontal layers (Figure~\ref{fig:layers}), the separation of concerns
+becomes explicit: each layer communicates with its neighbours through a stable
+contract, and \emph{grounding} is the cross-cutting guarantee that generation is
+constrained to retrieved museum data.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm,every node/.style={font=\small}]
+  \node[block,minimum width=0.8\textwidth] (l1) {Experience Layer (Flutter UI + camera overlay, bilingual)};
+  \node[block,minimum width=0.8\textwidth,below=of l1] (l2) {On-Device Detection Layer (YOLOv8n, TFLite, end-to-end NMS)};
+  \node[edgenode,minimum width=0.8\textwidth,below=of l2] (l3) {Knowledge \& RAG Layer (ChromaDB retrieval + Gemma 4 E2B via Ollama)};
+  \node[block,minimum width=0.8\textwidth,below=of l3] (l4) {Service Layer (FastAPI: \texttt{/ask}, \texttt{/artifact}, \texttt{/health})};
+  \node[store,minimum width=0.8\textwidth,below=of l4] (l5) {Data Layer (108-record bilingual KB; on-device preferences)};
+  \foreach \a/\b in {l1/l2,l2/l3,l3/l4,l4/l5}{\draw[{Stealth[]}-{Stealth[]},thick] (\a) -- (\b);}
+  \node[rotate=90,anchor=south,font=\footnotesize\bfseries] at ([xshift=-3mm]$(l1.west)!0.5!(l5.west)$) {Grounding};
+\end{tikzpicture}
+\caption{Layered architecture. Each layer is governed by a stable contract; ``grounding''
+is the cross-cutting guarantee that generation is constrained to retrieved museum data.}
+\label{fig:layers}
+\end{figure}
+
+\subsection{Class Design}
+
+Figure~\ref{fig:classdesign} sketches the core classes behind this flow. The mobile
+client drives an on-device \texttt{TFLiteDetector}, resolves artifact metadata locally,
+and calls the bilingual \texttt{RagService} only for chat---there is no backend ensemble
+verifier in the deployed path.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=8mm and 12mm,cls/.style={draw,fill=gemblue!5,font=\scriptsize,align=left}]
+  \node[cls] (client) {\begin{tabular}{@{}l@{}}\textbf{MobileClient}\\\hline currentFrame: Image\\\hline scan()\\ openInfo(id)\\ openChat(id)\end{tabular}};
+  \node[cls,right=of client] (det) {\begin{tabular}{@{}l@{}}\textbf{TFLiteDetector}\\\hline modelPath; inputSize=640\\ confidenceThreshold\\\hline parseEndToEndNMS()\\ classify(): Detection\end{tabular}};
+  \node[cls,below=of det] (meta) {\begin{tabular}{@{}l@{}}\textbf{ArtifactMetadataService}\\\hline dataset: JSON (51)\\\hline lookup(label): Artifact\end{tabular}};
+  \node[cls,right=of det] (rag) {\begin{tabular}{@{}l@{}}\textbf{RagService}\\\hline chroma\_en, chroma\_ar\\ ollama: Gemma4E2B\\\hline detectLanguage()\\ retrieve(); generateAnswer()\end{tabular}};
+  \draw[flow] (client) -- (det);
+  \draw[flow] (det) -- (meta);
+  \draw[flow] (det) -- (rag);
+\end{tikzpicture}
+\caption{Core class design: on-device detection (\texttt{TFLiteDetector}), local metadata
+lookup, and the bilingual RAG service. There is no backend ensemble verifier.}
+\label{fig:classdesign}
+\end{figure}
+
+\subsection{Scan-to-Answer Sequence}
+
+Figure~\ref{fig:sequence} traces one interaction from end to end. Identity is decided
+on-device the moment the visitor frames an artifact; the backend is contacted only when
+a question is asked, and only to retrieve context and phrase the answer.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+  \def\ytop{0} \def\ybot{-6.2}
+  \foreach \x/\name in {0/Visitor, 3/Mobile App, 6.4/FastAPI, 9.6/{ChromaDB + Gemma}}{
+    \node[draw,fill=gemsand,minimum width=18mm] (h\x) at (\x,\ytop) {\name};
+    \draw[dashed] (\x,\ytop-0.4) -- (\x,\ybot);
+  }
+  \draw[flow] (0,-0.9) -- node[above]{point camera / ask} (3,-0.9);
+  \draw[flow] (3,-1.5) -- ++(0.9,0) |- (3,-1.9) node[right,xshift=10mm]{on-device YOLOv8n detect + classify};
+  \draw[flow] (3,-2.5) -- node[above]{POST /ask \{question, artifact\_id\}} (6.4,-2.5);
+  \draw[flow] (6.4,-3.1) -- node[above]{retrieve (language-matched)} (9.6,-3.1);
+  \draw[flow] (9.6,-3.7) -- node[above]{context + grounded answer} (6.4,-3.7);
+  \draw[flow] (6.4,-4.3) -- node[above]{\{answer, language, category\}} (3,-4.3);
+  \draw[flow] (3,-4.9) -- node[above]{display + optional TTS} (0,-4.9);
+\end{tikzpicture}
+\caption{End-to-end scan-to-answer sequence. Identity is decided on-device; the backend
+only grounds and phrases the answer.}
+\label{fig:sequence}
+\end{figure}
+
+\section{System Interaction Timeline}
+
+The interaction is governed by an on-device confidence gate followed by
+retrieval-based factual grounding. Every step, from camera capture to the final
+answer, is designed so that the language model is invoked only after an artifact
+identity is established and only with retrieved, verified context.
+
+\section{Operational Pipeline}
+
+The deployed behavior is supported by a small set of operational modules on the
+knowledge side. Rather than a fabricated ``self-healing'' pipeline, these are the real
+scripts that build and serve the bilingual knowledge base
+(Table~\ref{tab:ragmodules}).
+
+\begin{table}[htbp]
+\centering
+\caption{Operational modules of the RAG knowledge service.}
+\label{tab:ragmodules}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Stage} & \textbf{Module} & \textbf{Responsibility}\\
+\midrule
+Dataset cleaning      & \texttt{clean\_dataset.py} & Normalize fields (e.g., strip a stray ``pigment'' prefix from a location).\\
+Loading / chunking    & \texttt{load\_dataset.py}  & Split each record into identity / description / significance chunks.\\
+Indexing              & \texttt{index\_dataset.py} & Build the language-separated EN/AR ChromaDB collections (215 chunks).\\
+Model serving         & \texttt{load\_model.py}    & Load Gemma 4 E2B via Ollama (cached; \texttt{keep\_alive}\,$=-1$).\\
+Retrieval + generation& \texttt{Rag\_engine.py}    & Language detect, query classify, retrieve, build prompt, generate.\\
+API                   & \texttt{api.py}            & FastAPI \texttt{/ask}, \texttt{/ask/stream}, \texttt{/artifact/\{id\}}, \texttt{/health}.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Inference Pipeline Architecture}
+
+On-device recognition follows a fixed, deterministic sequence
+(Figure~\ref{fig:infpipeline}). Each camera frame arrives as sensor-rotated YUV420
+data, which is converted to RGB, rotated $90^{\circ}$ to match the Android sensor
+orientation, resized to $640\times640$, and normalized before inference. The YOLOv8n
+model is exported with non-maximum suppression baked in, so a single forward pass
+returns a fixed-size \texttt{[1,300,6]} tensor of \texttt{(xyxy, score, class)} rows
+rather than raw anchors, removing any post-processing decode step on the device. A
+confidence and geometry filter (global threshold $0.75$, raised to $0.90$ for the
+visually near-identical Statue of Siptah) then keeps only trustworthy detections, which
+are tracked and drawn as overlays; tapping one opens the artifact's information and the
+RAG chat. Running NMS inside the model keeps per-frame latency at roughly
+30--60\,ms on a mid-tier Android phone.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=7mm,every node/.style={font=\small}]
+  \node[block,minimum width=62mm] (a) {Camera frame (YUV420, sensor-rotated)};
+  \node[block,minimum width=62mm,below=of a] (b) {YUV $\rightarrow$ RGB conversion};
+  \node[block,minimum width=62mm,below=of b] (c) {Rotate $90^{\circ}$ (Android) $\rightarrow$ resize $640$ $\rightarrow$ normalize};
+  \node[edgenode,minimum width=62mm,below=of c] (d) {YOLOv8n (end-to-end NMS) $\rightarrow$ \texttt{[1,300,6]}};
+  \node[block,minimum width=62mm,below=of d] (e) {Filter: conf $\geq 0.75$ (Siptah $0.90$) $+$ geometry sanity};
+  \node[store,minimum width=62mm,below=of e] (f) {Tracked label + box overlay $\rightarrow$ (tap) info + RAG chat};
+  \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f}{\draw[flow] (\x) -- (\y);}
+\end{tikzpicture}
+\caption{On-device inference pipeline from raw camera frame to a tracked, classified
+artifact. Non-maximum suppression is baked into the exported model.}
+\label{fig:infpipeline}
+\end{figure}
+
+\section{Data Flow Architecture}
+
+The information lifecycle is a progressive journey from a raw scan to a grounded
+answer: detect on-device, look up local metadata, and---only when the visitor
+asks---retrieve bilingual context and generate a response. No camera frames leave the
+device, and no per-frame data is logged remotely.
+
+\section{Technology Stack Selection}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Mobile app:} Flutter with Provider state management.
+  \item \textbf{On-device detection:} YOLOv8n (Ultralytics) exported to TensorFlow Lite
+        (FP16) with end-to-end NMS.
+  \item \textbf{RAG backend:} FastAPI $+$ LlamaIndex $+$ LangChain; Ollama serving
+        Gemma 4 E2B (Q4\_K\_M); ChromaDB vector store; multilingual MiniLM embeddings.
+  \item \textbf{Detector training:} Ultralytics 8.4.45 / PyTorch; YOLO-World for
+        auto-annotation; Roboflow for hand annotation.
+  \item \textbf{Serving / infrastructure:} Kaggle T4 GPU exposed via an ngrok tunnel.
+\end{itemize}
+
+\section{Gemma Integration and Grounding}
+
+Gemma is intentionally downstream of identity. The system never asks Gemma to decide
+which artifact is in view; identity is established by the calibrated on-device
+detector. Gemma is asked only to narrate \emph{retrieved} museum context after an
+artifact is known. This grounding contract keeps the language layer aligned with
+museum-safe behavior: if the relevant facts are not in the retrieved context, the
+model is instructed to say so rather than invent them. Backend re-verification of the
+on-device label is supported by the architecture but is not required in the deployed
+path.
+
+\section{Production Deployment Strategy}
+
+The deployment defines clear boundaries between the mobile edge (on-device detection
+and UI) and the knowledge backend (FastAPI RAG on a Kaggle T4 GPU, exposed via ngrok).
+This separation keeps the visitor-facing experience responsive and lets the knowledge
+base and model evolve without an app release.
+
+\section{App UI and UX Design Integration}
+
+UI and UX were treated as part of system reliability. The app is designed so that user
+trust and cognitive load remain stable while model confidence changes in the
+background. Instead of exposing raw uncertainty, the navigation guides visitors through
+understandable modes: scan, details, contextual learning, and optional conversation.
+
+\section{UI/UX Design Philosophy}
+
+The design philosophy centers on visitor trust. By mapping the operational steps from
+visual capture to grounded answer, the system creates a seamless educational journey,
+and the hierarchical arrangement of screens lets visitors move naturally between
+discovery, scanning, and interactive chat.

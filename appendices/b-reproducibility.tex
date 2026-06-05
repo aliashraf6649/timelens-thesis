@@ -1,0 +1,48 @@
+\chapter{Reproducibility Report}
+
+\section{Environment}
+The detector is trained with Ultralytics 8.4.45 on PyTorch; the RAG service uses
+FastAPI, LlamaIndex, LangChain, Ollama, and ChromaDB; the mobile app is built with
+Flutter. Dependency definitions and scripts in the project repositories support
+deterministic re-runs.
+
+\section{Deployment}
+The RAG service is deployed on a Kaggle T4 GPU and exposed to the mobile app through an
+ngrok tunnel; the detector ships as a TensorFlow Lite asset bundled with the Flutter
+app. No container image is required for the deployed path.
+
+\section{Seed and Split Management}
+Because the dataset is built from video frames, splits are performed
+\emph{chronologically within each class/video group} (not by random shuffle) to
+minimize near-duplicate frame leakage between train, validation, and test. The v3
+detector uses a $70/20/10$ split.
+
+\section{Hardware}
+Table~\ref{tab:hardware} reports the hardware used for each role.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware and runtime by role.}
+\label{tab:hardware}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Role} & \textbf{Hardware} & \textbf{Notes}\\
+\midrule
+Detector training & NVIDIA GTX 1650 Ti (4\,GB) & Ultralytics 8.4.45 / PyTorch; $\sim$34\,h GPU $+$ $\sim$40\,h hand annotation.\\
+RAG experiments   & NVIDIA RTX 3050 Laptop (4\,GB), 16\,GB RAM & Ollama (CUDA), Flash Attention enabled.\\
+Production serving & Kaggle T4 GPU $+$ ngrok & FastAPI RAG service.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Experiment Traceability}
+Detector experiments are traceable through the Ultralytics run directories
+(\texttt{results.csv}, \texttt{per\_class\_metrics.csv}) for each iteration
+(v1/v2/v2@640/v3). The RAG pipeline is evaluated against a fixed set of 20 standardized
+bilingual questions (12 English, 8 Arabic) across camera and text modes.
+
+\section{One-Command Rebuild}
+The detector is reproduced by running the training scripts in order
+(\texttt{01\allowbreak\_split\allowbreak\_dataset.py} through \texttt{06\_eval.py}) and exporting
+with \texttt{05\_export\allowbreak\_tflite.py}; the knowledge service is rebuilt with
+\texttt{index\_dataset.py} and served with \texttt{api.py}.

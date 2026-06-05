@@ -1,0 +1,79 @@
+\chapter{Literature Review}
+
+\section{Domain Background}
+
+Digital heritage systems require high recognition reliability under uncontrolled
+acquisition conditions. Museum deployments add constraints including privacy,
+latency, multilingual support, and explainable outcomes.
+
+Unlike lab datasets, museum environments introduce dynamic human behavior: people
+move in front of displays, lighting varies across halls, glass reflections appear
+unexpectedly, and objects are photographed from oblique angles. A model that performs
+well in clean, centered-image conditions can fail abruptly in these scenarios. The
+literature review is therefore interpreted through deployment realism rather than
+isolated benchmark ranking.
+
+\section{State of the Art in Software Solutions}
+
+Existing solutions include cloud classification APIs, AR image-retrieval systems, and
+on-device CNN classifiers. Each approach trades off latency, privacy, and robustness.
+Marker-based AR remains common in heritage apps but is sensitive to viewing angle and
+lighting and scales poorly to large artifact sets, as documented in case studies of
+Egyptian cultural-heritage AR~\citep{abdelhady2025enhancing}.
+
+\section{Survey of AI Approaches}
+
+\subsection{On-Device Object Detection}
+Single-stage detectors of the YOLO family provide a strong speed/accuracy balance for
+mobile deployment, and export cleanly to TensorFlow Lite for on-device inference with
+end-to-end non-maximum suppression baked into the graph~\citep{yolov8}. Comparative
+studies of museum-exhibit recognition from video-derived datasets report that YOLOv8
+reaches very high mean Average Precision while remaining light enough for real-time
+mobile use, outperforming heavier backbones such as VGG-16 and ResNet variants on the
+speed/accuracy trade-off~\citep{ipalakova2025comparative}. Adaptive CNN approaches
+have likewise been used to enrich museum interaction through automatic artifact
+recognition~\citep{wen2024enhancing}.
+
+\subsection{Foundation-Model Auto-Annotation}
+Manually annotating tens of thousands of frames is prohibitive for a student-led
+project, motivating \emph{auto-annotation} with open-vocabulary, text-prompted
+detectors such as YOLO-World~\citep{yoloworld}. Such foundation models handle generic
+concepts well but degrade on fine-grained, domain-specific objects---precisely the
+near-identical statues that dominate the GEM collection---producing systematically
+mislocalized or sibling-confused labels. This limitation is the central motivation for
+the data-quality study in Chapter~5.
+
+\subsection{Retrieval-Augmented Generation and On-Device LLMs}
+Retrieval-Augmented Generation (RAG) grounds a language model's output in passages
+retrieved from a knowledge base rather than its parametric memory, reducing
+fabrication in knowledge-intensive tasks~\citep{lewis2020rag}. Recent work also brings
+context-aware LLM assistants into AR settings~\citep{qorbani2025teaching}. On the
+serving side, quantized models run locally through runtimes such as
+Ollama~\citep{ollama}, while multilingual sentence embeddings make a single bilingual
+(English/Arabic) retrieval index practical. Robustness challenges specific to heritage
+capture---low contrast, reduced lighting for pigment preservation, and crowd
+occlusion---are active research topics~\citep{liu2025yolov8,dai2024occlusion}.
+
+\section{Identification of Research Gaps}
+
+The review identifies three combined gaps that this thesis addresses: (i) label
+quality for fine-grained, domain-specific detection; (ii) honest evaluation of
+video-frame datasets, where random splits leak near-duplicate frames; and (iii)
+grounded, bilingual generation for public-facing museum guides. Table~\ref{tab:gaps}
+maps prior approaches to how \TimeLens{} fills each gap.
+
+\begin{table}[htbp]
+\centering
+\caption{Synthesis of prior work and gap fit.}
+\label{tab:gaps}
+\begin{tabularx}{\textwidth}{@{}p{0.24\textwidth}p{0.20\textwidth}p{0.22\textwidth}X@{}}
+\toprule
+\textbf{Approach} & \textbf{Strength} & \textbf{Limitation} & \textbf{How TimeLens addresses it}\\
+\midrule
+Cloud classification APIs & Easy integration, strong models & Latency, privacy, connectivity dependence & On-device YOLOv8n detection (no per-frame round-trip)\\
+Foundation-model auto-annotation (YOLO-World) & Cheap labels at scale & Fails on fine-grained, domain-specific artifacts & Label-quality iteration: spatial cleaning $+$ hand annotation\\
+Random-split evaluation on video frames & Simple to run & Frame leakage inflates metrics & Honest disclosure $+$ conservative held-out; future video-level split\\
+Ungrounded LLM guides & Fluent, engaging & Hallucinate facts; weak Arabic & Bilingual RAG grounding (ChromaDB $+$ Gemma 4 E2B)\\
+\bottomrule
+\end{tabularx}
+\end{table}

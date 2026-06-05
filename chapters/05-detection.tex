@@ -1,0 +1,271 @@
+\chapter{On-Device Artifact Detection}
+
+\section{Overview}
+
+This chapter presents the on-device detector that powers \TimeLens{}: a compact
+YOLOv8n model that recognizes 51 \GEM{} artifacts in real time on a phone. The central
+finding is that, for this fine-grained domain, \textbf{label quality dominates model
+architecture and input resolution}. We reach a deployable detector not by enlarging
+the network but by progressively improving the training labels, from foundation-model
+auto-annotation through spatial cleaning rules to full hand annotation.
+
+\section{Problem and Constraints}
+
+Pointing a phone at an exhibit must (i) detect that an artifact is present, (ii)
+classify it as one of 51 catalogued artifacts, and (iii) track it with a bounding box
+in real time. Deployment constraints rule out cloud detectors: inference must run
+on-device (no per-frame round-trip), in real time ($\geq 2.5$\,FPS on mid-tier
+phones), with a compact model ($<8$\,MB TFLite asset), and be robust to handheld
+capture. These constraints led to YOLOv8-nano with FP16 TensorFlow Lite
+deployment~\citep{yolov8,ipalakova2025comparative}.
+
+\section{Objectives and Contributions}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item A foundation-model auto-annotation pipeline (YOLO-World) plus four spatial
+        sanity rules that recover most labeling failures without manual work.
+  \item A controlled iteration study (v1$\rightarrow$v3) that isolates label quality
+        from architecture and resolution.
+  \item An honest analysis of validation frame leakage and training-to-deployment
+        domain shift.
+  \item A deployable 5.97\,MB TFLite detector with end-to-end NMS.
+\end{itemize}
+
+\section{Methodology}
+
+\subsection{Dataset and Acquisition}
+The source material is roughly 50 videos of GEM artifacts captured before public
+opening. Frames extracted at about one per second yield approximately 30{,}000
+candidate images across 51 classes. Manual annotation of 30k images is infeasible for
+a student team, motivating an auto-annotation-first pipeline.
+
+\subsection{v1 --- Auto-Annotated Baseline}
+The first labels were produced by YOLO-World (\texttt{yolov8s-worldv2})\citep{yoloworld},
+a text-prompted open-vocabulary detector. Each class received a prompt (e.g., ``statue
+of Ramesses II'', ``stone stela''), and the highest-confidence box per frame was kept
+as ground truth. A YOLOv8n model trained on these labels at $320\times320$ reached
+mAP@0.5 $=0.751$, but per-class analysis revealed \textbf{ten classes below mAP@0.5
+$=0.30$}. Inspection showed two failure modes: \emph{Mode A} (nine classes), where
+YOLO-World boxed the wrong object in the frame (a wall card, a bench, a neighboring
+statue); and \emph{Mode B} (one class, \emph{Head of Ramesses III}), sibling-class
+confusion between a bust and full-body statues. The architecture was capable; the
+labels were the bottleneck.
+
+\subsection{v2 --- Spatial Sanity Rules}
+A second-pass annotator added four geometric rules to the YOLO-World output:
+(1)~restrict the ``stela'' prompt to the two true stela classes; (2)~drop boxes whose
+center lies in the bottom quarter of the frame ($c_y>0.75$), which are almost always
+floor signs or bystanders; (3)~pick the largest-area box rather than the
+highest-confidence one (artifacts dominate the frame; spurious text boxes are small);
+and (4)~for each video, drop boxes whose center deviates from the per-video median by
+more than $0.20$. These rules dropped about $6.9\%$ of frames, leaving $27{,}134$.
+Retraining (still $320\times320$) raised mAP@0.5 to $0.867$ ($+0.116$ from a labeling
+change alone) and reduced broken classes from ten to three. Three classes remained at
+zero because their auto-labels were unrecoverable.
+
+\subsection{v2 at 640 and End-to-End NMS}
+Raising the input to $640\times640$ and exporting with end-to-end NMS
+(\texttt{nms=True}, output \texttt{[1,300,6]}) left mAP@0.5 unchanged at $0.867$ but
+lifted mAP@0.5:0.95 from $0.586$ to $0.777$ ($+0.191$): higher resolution improves
+\emph{localization} but cannot fix classes whose labels are wrong. The data-quality
+ceiling was unmistakable.
+
+\subsection{v3 --- Full Hand Annotation}
+All 51 classes were re-annotated by hand in Roboflow ($24{,}384$ images,
+$70/20/10$ split), drawing full-artifact boxes, avoiding peripheral objects, and
+carefully distinguishing similar artifacts. Warm-started from the v2@640 weights and
+trained for 100 epochs on a GTX~1650~Ti, v3 reached precision $0.998$, recall $1.000$,
+mAP@0.5 $0.995$, and mAP@0.5:0.95 $0.924$, with \textbf{zero broken classes}. The
+validation classification loss collapsed from $0.892$ to $0.166$ --- the model's
+quantitative way of saying the labels are now internally consistent.
+
+\section{Core Algorithms}
+
+Two procedures capture the steps most prone to error. The first formalizes the
+auto-annotation pass and its spatial sanity rules (the v1$\rightarrow$v2 transition);
+the second shows how the exported model's end-to-end NMS output is parsed on-device.
+
+\begin{algorithm}[htbp]
+\caption{Auto-annotation with spatial sanity rules (v1$\rightarrow$v2)}
+\KwIn{video frames $F$; per-class text prompts $P$; true-stela class set $S$}
+\KwOut{one labeled box per usable frame}
+\ForEach{frame $f \in F$ (class $c$ from its folder)}{
+  $B \leftarrow \textsc{YoloWorld}(f, P)$\;
+  \If{$c \notin S$}{remove stela-prompt detections from $B$}
+  remove boxes with center $c_y > 0.75$\;
+  \If{$B \neq \emptyset$}{
+    $b^\star \leftarrow \arg\max_{b\in B}\;\mathrm{area}(b)$ \tcp*{tie-break on confidence}
+    drop $b^\star$ if its center deviates $>0.20$ from the per-video median center\;
+    \If{$b^\star$ kept}{emit $(b^\star, c)$}
+  }
+}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption{End-to-end NMS detection parsing (on-device)}
+\KwIn{model output $T$ of shape \texttt{[1,300,6]}; per-class thresholds $\tau(\cdot)$}
+\KwOut{tracked detections $D$}
+$D \leftarrow \emptyset$\;
+\ForEach{row $(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls}) \in T$}{
+  \If{$\mathit{conf} \geq \tau(\mathit{cls})$ \textbf{and} box geometry is valid}{
+    add $(x_1,y_1,x_2,y_2,\mathit{cls},\mathit{conf})$ to $D$ \tcp*{NMS already applied in-graph}
+  }
+}
+\Return $D$\;
+\end{algorithm}
+
+\section{Experimental Design}
+
+Detection quality is measured with the standard object-detection metrics. With true
+positives (TP), false positives (FP), and false negatives (FN), and predicted/ground-truth
+boxes $A,B$:
+\begin{equation}\mathrm{IoU}(A,B)=\frac{|A\cap B|}{|A\cup B|}\end{equation}
+\begin{equation}\mathrm{Precision}=\frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}\end{equation}
+\begin{equation}\mathrm{Recall}=\frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}\end{equation}
+\begin{equation}\mathrm{AP}=\int_{0}^{1} p(r)\,\mathrm{d}r\end{equation}
+\begin{equation}\mathrm{mAP}=\frac{1}{N}\sum_{i=1}^{N}\mathrm{AP}_i\end{equation}
+where $p(r)$ is the precision--recall curve and AP its area; mAP@0.5 evaluates at
+IoU $=0.5$ and mAP@0.5:0.95 averages AP over IoU thresholds $0.5,0.55,\dots,0.95$. We
+also report the number of \emph{broken} classes (mAP@0.5 $<0.30$), since per-class
+failure matters more than the average for a visitor-facing app.
+
+\section{Results and Analysis}
+
+Table~\ref{tab:iteration} summarizes the four iterations and Figure~\ref{fig:iteration}
+plots the mAP@0.5 progression. The dominant lesson is that label cleaning ($+0.116$
+mAP@0.5, no model change) and hand annotation ($+0.128$ mAP@0.5, $+0.147$ mAP@0.5:0.95)
+broke ceilings that resolution scaling could not.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Detector iteration comparison (validation).}
+\label{tab:iteration}
+\begin{tabular}{@{}lllllll@{}}
+\toprule
+\textbf{Iter.} & \textbf{Labels} & \textbf{imgsz} & \textbf{Head} & \textbf{mAP$_{50}$} & \textbf{mAP$_{50:95}$} & \textbf{Broken}\\
+\midrule
+v1     & Auto (YOLO-World)       & 320 & raw     & 0.751 & ---   & 10\\
+v2     & Auto $+$ 4 rules        & 320 & raw     & 0.867 & 0.586 & 3\\
+v2@640 & Auto $+$ rules          & 640 & E2E NMS & 0.867 & 0.777 & 3\\
+\textbf{v3} & \textbf{Hand-annotated} & \textbf{640} & \textbf{E2E NMS} & \textbf{0.995} & \textbf{0.924} & \textbf{0}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}
+\begin{axis}[ybar,symbolic x coords={v1,v2@320,v2@640,v3},xtick=data,
+  ymin=0,ymax=1.08,ylabel={mAP@0.5},bar width=16pt,width=0.82\textwidth,height=6cm,
+  nodes near coords,every node near coord/.append style={font=\scriptsize},
+  enlarge x limits=0.18]
+\addplot[fill=gemblue!55] coordinates {(v1,0.751)(v2@320,0.867)(v2@640,0.867)(v3,0.995)};
+\end{axis}
+\end{tikzpicture}
+\caption{Detection mAP@0.5 across iterations: label cleaning (v1$\rightarrow$v2) and
+hand annotation (v2@640$\rightarrow$v3) drive the gains; resolution scaling alone leaves
+mAP@0.5 flat.}
+\label{fig:iteration}
+\end{figure}
+
+Hand annotation rescued every previously broken class
+(Table~\ref{tab:rescue}). Figure~\ref{fig:detexample} shows live detections from the
+deployed app, including the Amenhotep~II / Thutmose~III sibling pair distinguished
+simultaneously.
+
+\begin{table}[htbp]
+\centering
+\caption{Per-class rescue from auto-labels (v2) to hand-labels (v3), mAP@0.5:0.95.}
+\label{tab:rescue}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Class} & \textbf{v2} & \textbf{v3}\\
+\midrule
+Double Statue of Ramesses II        & 0.000 & 0.995\\
+Overseer Amenemhat                  & 0.000 & 0.940\\
+Thutmose III Statue                 & 0.000 & 0.941\\
+Naktmin and Tiy                     & 0.269 & 0.977\\
+Statue of King Akhenaten            & 0.281 & 0.955\\
+Seated Statue of King Thutmose III  & 0.440 & 0.862\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.40\textwidth}\centering
+\includegraphics[width=\linewidth]{app_detection_1.jpg}\\[1mm](a)
+\end{minipage}\hfill
+\begin{minipage}{0.40\textwidth}\centering
+\includegraphics[width=\linewidth]{app_detection_2.jpg}\\[1mm](b)
+\end{minipage}
+\caption{Live on-device detection in the deployed \TimeLens{} app: (a) two
+near-identical New Kingdom statues distinguished at once---Amenhotep~II versus
+Thutmose~III, the canonical fine-grained sibling case; (b) the Kneeling Statue of Queen
+Hatshepsut. Each box appears only after clearing the on-device confidence gate.}
+\label{fig:detexample}
+\end{figure}
+
+\section{Failure Modes and Caveats}
+
+The v3 validation metrics \emph{overstate} real-world generalization, and we disclose
+this plainly.
+
+\textbf{Frame leakage.} The dataset is video frames split randomly per image. Adjacent
+frames are near-duplicates, so a frame in training can have an almost-identical twin in
+validation. The v3 mAP@0.5 saturates at $0.995$ within about three epochs of
+warm-started training, which is characteristic of memorization rather than
+generalization. A conservative, in-distribution \emph{held-out test} (using the
+$320$ model) gives a more honest picture: precision $0.691$, recall $0.815$,
+mAP@0.5 $0.751$, mAP@0.5:0.95 $0.650$.
+
+\textbf{Domain shift.} Training frames come from stable, pre-opening videos; deployment
+uses handheld phone cameras under public lighting with motion blur. Phone-camera
+inference is materially worse than on the source videos.
+
+\textbf{Auto-annotation ceiling.} Open-vocabulary detectors handle generic concepts but
+fail on fine-grained, domain-specific objects; spatial rules recovered most failures,
+but a residual fraction required manual labeling. Figure~\ref{fig:confusion} shows the
+residual fine-grained confusion as an off-diagonal structure in the confusion matrix.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{confusion_matrix.png}
+\caption{Normalized 51-class confusion matrix (v3). The strong diagonal confirms
+separation; faint off-diagonal cells mark residual sibling-class confusion among
+visually similar statues.}
+\label{fig:confusion}
+\end{figure}
+
+\section{Engineering Findings}
+
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Android frame rotation.} Back-camera sensors deliver frames rotated
+        $90^{\circ}$ from the display; a rotation step is required before resizing or
+        every prediction is computed on a sideways artifact.
+  \item \textbf{End-to-end NMS format.} The exported output has shape
+        \texttt{[1,300,6]}; each row is $(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls})$ in
+        corner format (not center-width-height), so misreading it stretches and shifts boxes.
+  \item \textbf{Calibration from clean labels.} Clean labels produce sharp confidence
+        distributions (real artifacts cluster high; off-target scenes fall well below),
+        which lets the app raise its on-device threshold for out-of-distribution
+        rejection (global $0.75$, with $0.90$ for the false-positive-prone
+        \emph{Siptah Stela}).
+  \item \textbf{Footprint.} The deployed asset is FP16 TFLite at \textbf{5.97\,MB},
+        running in roughly $30$--$60$\,ms per frame on a mid-tier Android phone.
+\end{itemize}
+
+\section{Limitations}
+
+The headline validation metrics are bounded by frame leakage, and a training-to-phone
+domain gap remains. The honest, deployment-facing numbers are the held-out test figures
+above. Mitigations are deferred to future work (Chapter~8): splitting by video rather
+than by frame, capturing a phone-camera deployment test set, and stronger augmentation.
+
+\section{Conclusion}
+
+For fine-grained museum artifacts, \textbf{label quality is first-order}; architecture
+and resolution are second-order. A compact YOLOv8n trained on clean, hand-verified
+labels yields a deployable, real-time, on-device detector that feeds the rest of the
+\TimeLens{} system.

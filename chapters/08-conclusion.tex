@@ -1,0 +1,39 @@
+\chapter{Conclusion and Future Work}
+
+\section{Summary of Contributions}
+
+This thesis delivered \TimeLens{}, an AI- and AR-powered bilingual guide for the
+\GEM{}, through two engineering contributions and a market study. The first is an
+\textbf{on-device artifact detector} whose development isolated label quality---not
+architecture or resolution---as the decisive factor, yielding a compact YOLOv8n model
+that resolves every previously failing class. The second is a \textbf{grounded
+bilingual RAG guide}, selected from a seven-model benchmark and optimized from over
+30\,s to about 10\,s end-to-end latency, that keeps answers anchored to curated museum
+data in English or Arabic. Both ship in a production Flutter application, and a market
+analysis situates the system within the heritage-AR landscape.
+
+\section{Critical Reflection}
+
+The decisive gains in this project came not from model complexity but from
+\textbf{clean data and grounding}: hand-verified labels made the on-device detector
+trustworthy, and retrieval grounding kept the language model factual. The honest
+residual risks are equally clear---validation frame leakage and training-to-deployment
+domain shift on the detection side, fine-grained long-tail classes, and evolving
+real-world capture conditions.
+
+\section{Future Work}
+
+\paragraph{Detection.} Split the dataset by source video rather than by frame to remove
+frame leakage; capture and annotate a phone-camera \emph{deployment-distribution} test
+set for honest field metrics; apply stronger augmentation for domain shift; and
+re-label or expand the remaining long-tail classes.
+
+\paragraph{Retrieval-augmented guide.} Expand the closed knowledge base; replace or
+augment the keyword query classifier with a learned intent model; add conversational
+memory across turns; and build index health-audit and maintenance tooling so the
+knowledge base can be updated and validated routinely as the collection grows.
+
+\paragraph{System.} Optionally enable backend re-verification (the \texttt{/predict}
+path) for low-confidence detections; add explainable detection overlays; and conduct
+primary user studies (including System Usability Scale evaluation) in live museum
+conditions to quantify learning outcomes and long-horizon experience quality.

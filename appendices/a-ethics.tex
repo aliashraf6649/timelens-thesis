@@ -1,0 +1,26 @@
+\chapter{AI Ethics and Bias Statement}
+
+\section{Data Fairness}
+We assess class balance and confusion concentration to detect under-represented
+categories and biased behavior. Per-class precision/recall/mAP (recorded in the
+detector's \texttt{per\_class\_metrics.csv}) and the normalized confusion matrix expose
+the fine-grained classes most prone to error, rather than hiding them behind an average.
+
+\section{Mitigation}
+Bias and failure are mitigated primarily through \emph{label quality}: hand annotation
+removed systematic auto-labeling errors, augmentation broadens coverage, and per-class
+confidence thresholds (e.g., a stricter floor for the false-positive-prone
+\emph{Siptah Stela}) reduce confident mistakes. On the language side, retrieval
+grounding plus an explicit Arabic name reference reduce hallucination and mis-transliteration.
+
+\section{Transparency and Explainability}
+The work reports per-class metrics and the confusion matrix, and openly discloses the
+validation frame-leakage and domain-shift limitations together with conservative
+held-out numbers. The RAG guide answers only from retrieved, citable museum context.
+
+\section{Ethical Risk Assessment}
+The principal risk is misplaced visitor trust in an uncertain prediction. The system
+mitigates this with a calibrated confidence gate that suppresses low-confidence
+detections rather than guessing, on-device inference that uploads no per-frame imagery,
+and a locally served language model that keeps visitor queries out of third-party
+services.
