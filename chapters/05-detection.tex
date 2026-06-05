@@ -83,7 +83,8 @@ quantitative way of saying the labels are now internally consistent.
 
 Two procedures capture the steps most prone to error. The first formalizes the
 auto-annotation pass and its spatial sanity rules (the v1$\rightarrow$v2 transition);
-the second shows how the exported model's end-to-end NMS output is parsed on-device.
+the second shows how the exported model's end-to-end NMS output is parsed and
+deduplicated on-device.
 
 \begin{algorithm}[htbp]
 \caption{Auto-annotation with spatial sanity rules (v1$\rightarrow$v2)}
@@ -102,13 +103,17 @@ the second shows how the exported model's end-to-end NMS output is parsed on-dev
 \end{algorithm}
 
 \begin{algorithm}[htbp]
-\caption{End-to-end NMS detection parsing (on-device)}
+\caption{On-device parsing of end-to-end NMS output (with same-class dedup)}
 \KwIn{model output $T$ of shape \texttt{[1,300,6]}; per-class thresholds $\tau(\cdot)$}
-\KwOut{tracked detections $D$}
+\KwOut{deduplicated detections $D$}
 $D \leftarrow \emptyset$\;
-\ForEach{row $(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls}) \in T$}{
+\ForEach{row $r=(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls}) \in T$}{
   \If{$\mathit{conf} \geq \tau(\mathit{cls})$ \textbf{and} box geometry is valid}{
-    add $(x_1,y_1,x_2,y_2,\mathit{cls},\mathit{conf})$ to $D$ \tcp*{NMS already applied in-graph}
+    $c \leftarrow$ center of $r$\;
+    \If{some kept $r' \in D$ has class $\mathit{cls}$ and contains $c$}{
+      replace $r'$ with $r$ if $\mathrm{conf}(r) > \mathrm{conf}(r')$ \tcp*{in-graph NMS leaks identical rows; dedup required}
+    }
+    \Else{add $r$ to $D$}
   }
 }
 \Return $D$\;
@@ -244,9 +249,14 @@ visually similar statues.}
   \item \textbf{Android frame rotation.} Back-camera sensors deliver frames rotated
         $90^{\circ}$ from the display; a rotation step is required before resizing or
         every prediction is computed on a sideways artifact.
-  \item \textbf{End-to-end NMS format.} The exported output has shape
+  \item \textbf{End-to-end NMS format and duplicate leakage.} The exported output has shape
         \texttt{[1,300,6]}; each row is $(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls})$ in
         corner format (not center-width-height), so misreading it stretches and shifts boxes.
+        Empirically, the Ultralytics \texttt{nms=True} TFLite export bakes near-zero NMS
+        thresholds into the graph, so a single dominant object can produce $100$--$250$
+        identical copies of its top-survivor row in the $300$-slot buffer. The on-device
+        parser therefore runs a per-class same-center dedup before drawing; without it,
+        the overlay would draw the same box over itself many times.
   \item \textbf{Calibration from clean labels.} Clean labels produce sharp confidence
         distributions (real artifacts cluster high; off-target scenes fall well below),
         which lets the app raise its on-device threshold for out-of-distribution
