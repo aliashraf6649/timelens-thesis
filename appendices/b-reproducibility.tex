@@ -25,7 +25,7 @@ Table~\ref{tab:hardware} reports the hardware used for each role.
 \centering
 \caption{Hardware and runtime by role.}
 \label{tab:hardware}
-\begin{tabularx}{\textwidth}{@{}llX@{}}
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}p{0.30\textwidth}>{\raggedright\arraybackslash}X@{}}
 \toprule
 \textbf{Role} & \textbf{Hardware} & \textbf{Notes}\\
 \midrule
@@ -44,7 +44,7 @@ Detector experiments are traceable through the Ultralytics run directories
 bilingual questions (12 English, 8 Arabic) across camera and text modes.
 
 \section{One-Command Rebuild}
-The detector is reproduced by running the training scripts in order
-(\texttt{01\allowbreak\_split\allowbreak\_dataset.py} through \texttt{06\_eval.py}) and exporting
+The detector is reproduced by running the training scripts
+\texttt{01\allowbreak\_split\allowbreak\_dataset.py} through \texttt{06\_eval.py} and exporting
 with \texttt{05\_export\allowbreak\_tflite.py}; the knowledge service is rebuilt with
 \texttt{index\_dataset.py} and served with \texttt{api.py}.

@@ -134,7 +134,7 @@ VRAM            & 2145\,MB & 1389\,MB (cold) & 2565\,MB\\
 Ten optimizations reduced end-to-end latency from over 30\,s to about 10\,s
 (Table~\ref{tab:opts}, Figure~\ref{fig:latency}) while improving answer quality.
 
-\begin{longtable}[c]{@{}p{0.33\textwidth}p{0.67\textwidth}@{}}
+\begin{longtable}[c]{@{}>{\raggedright\arraybackslash}p{0.33\textwidth}p{\dimexpr0.67\textwidth-2\tabcolsep\relax}@{}}
 	\caption{Pipeline optimizations and measured impact.\label{tab:opts}}\\
 %first header
 	\hline
@@ -167,7 +167,7 @@ Mode-specific \texttt{num\_predict}
 Mode-specific \texttt{top\_k}
 (Camera 4 / Text 8)							& $\sim$1--2\,s saved per camera query. Camera mode retrieves exactly the artifact's chunks; text mode retrieves enough for multi-artifact questions.\\
 Flash Attention
-(\texttt{OLLAMA\_FLASH\_ATTENTION=1})		& $\sim$10--15\% faster inference.\\
+(\texttt{OLLAMA\_\allowbreak FLASH\_\allowbreak ATTENTION=1})		& $\sim$10--15\% faster inference.\\
 Composite model-instance cache key			& Fixed a silent bug where all queries used the camera token limit regardless of mode.\\
 \texttt{keep\_alive}\,$=-1$					& Eliminated per-call cold-start. Model stays resident in GPU memory permanently.\\
 Model pre-warming at startup				& First real request runs at warm-cache speed instead of paying the cold-start penalty.\\

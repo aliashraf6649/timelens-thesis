@@ -106,7 +106,7 @@ the second shows how the exported model's end-to-end NMS output is parsed on-dev
 \KwIn{model output $T$ of shape \texttt{[1,300,6]}; per-class thresholds $\tau(\cdot)$}
 \KwOut{tracked detections $D$}
 $D \leftarrow \emptyset$\;
-\ForEach{row $(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls}) \in T$}{
+\ForEach{row $r=(x_1,y_1,x_2,y_2,\mathit{conf},\mathit{cls}) \in T$}{
   \If{$\mathit{conf} \geq \tau(\mathit{cls})$ \textbf{and} box geometry is valid}{
     add $(x_1,y_1,x_2,y_2,\mathit{cls},\mathit{conf})$ to $D$ \tcp*{NMS already applied in-graph}
   }
