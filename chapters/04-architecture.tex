@@ -38,6 +38,8 @@ model.}
 \label{fig:block}
 \end{figure}
 
+\FloatBarrier
+
 \section{Layered System Architecture}
 
 Viewed as layers (Figure~\ref{fig:layers}), the separation of concerns becomes
@@ -109,6 +111,8 @@ dataset---bundled as JSON on the device, indexed as ChromaDB collections on the
 backend---and ``grounding'' constrains generation to that retrieved museum data.}
 \label{fig:layers}
 \end{figure}
+
+\FloatBarrier
 
 \subsection{Class Design}
 
@@ -222,6 +226,7 @@ RAG chat. Running NMS inside the model keeps per-frame latency at roughly
 artifact. Non-maximum suppression is baked into the exported model.}
 \label{fig:infpipeline}
 \end{figure}
+
 
 \section{Data Flow Architecture}
 
