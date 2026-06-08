@@ -6,9 +6,7 @@ Fine-grained artifact recognition in museum environments is difficult due to
 background clutter, low-light capture, visual overlap between classes, and open-set
 uncertainty. At the \GEM{} (GEM) the difficulty is acute: the target set contains
 \textbf{51 catalogued artifacts}, many of which are near-identical Ramesside statues
-that differ only in subtle pose, headdress, or accompanying standards. Single-model
-solutions trained on idealized imagery often produce unstable predictions in field
-conditions.
+that differ only in subtle pose, headdress, or accompanying standards.
 
 In practical terms, this means the system can appear confident when it should be
 cautious, and uncertain when the visitor expects immediate clarity. A tourist
@@ -64,7 +62,7 @@ every smartphone into a bilingual curatorial companion.
 
 \subsection{Objectives}
 \begin{itemize}[leftmargin=1.5em]
-  \item Build and evaluate a compact, leakage-aware on-device artifact detector
+  \item Build and evaluate a compact on-device artifact detector
         (YOLOv8n) exported to TensorFlow Lite.
   \item Build a grounded bilingual RAG guide (ChromaDB retrieval + Gemma 4 E2B
         generation) served behind a FastAPI interface.
