@@ -25,21 +25,13 @@ end-to-end latency from \textbf{over 30\,s to about 10\,s}. Both ship in a produ
 \textbf{Flutter} application with a bilingual interface, museum location gating, and
 text-to-speech.
 
-Beyond headline metrics, the thesis is written to be reproducible and honest about
-its limits: the detection study explicitly discloses validation \emph{frame-leakage}
-and the training-to-deployment \emph{domain shift}, reporting a conservative held-out
+Beyond headline metrics, the thesis reports a conservative held-out
 result (mAP@0.5 $=0.751$) alongside the in-distribution figures. The document
 includes reproducibility notes, an ethics and bias statement, and a formal
 generative-AI disclosure.
-
-\begin{insightbox}
-A reliable museum guide is built less by adding model complexity than by
-\emph{grounding} it: clean labels make the on-device detector trustworthy, and
-retrieval-grounded generation keeps the language model factual. \TimeLens{}'s value
-comes from disciplined data and grounding, not a larger model.
-\end{insightbox}
 
 \vspace{1.2em}
 \noindent\textbf{Keywords:} on-device object detection; YOLOv8n; TensorFlow Lite;
 retrieval-augmented generation (RAG); Gemma; ChromaDB; bilingual question answering;
 augmented reality; Flutter; cultural heritage computing; Grand Egyptian Museum.
+
