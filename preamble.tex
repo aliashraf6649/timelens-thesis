@@ -1,18 +1,28 @@
 % =====================================================================
 %  TimeLens / GEM Graduation Thesis -- shared preamble
-%  Compile with pdfLaTeX + BibTeX (latexmk -pdf main.tex).
+%  Compile with XeLaTeX + BibTeX (latexmk main.tex; see .latexmkrc).
 %  Portable: all packages ship with a full TeX Live / MiKTeX install.
-%  NOTE on Arabic: examples are given in transliteration (Latin script)
-%  so the document compiles under pdfLaTeX. To typeset native Arabic,
-%  switch to XeLaTeX/LuaLaTeX and add fontspec + polyglossia with an
-%  Arabic font; no other change is required.
+%  Arabic: the Arabic-language abstract is typeset natively via polyglossia
+%  + the Amiri font, which REQUIRES XeLaTeX or LuaLaTeX. Build with
+%  `latexmk main.tex` (.latexmkrc selects xelatex) or `latexmk -xelatex
+%  main.tex`. Under pdfLaTeX the document still compiles, but the Arabic
+%  abstract degrades to a one-line notice.
 % =====================================================================
 
 % ---- Encoding & fonts -------------------------------------------------
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage{microtype} % char protrusion + font expansion: trims overfull boxes
+% Engine-aware: pdfLaTeX keeps inputenc/fontenc/lmodern; XeLaTeX/LuaLaTeX use
+% fontspec (Latin Modern stays the default, so Latin text is visually unchanged).
+% Native Arabic (polyglossia + Amiri) is set up at the END of this file, since
+% the bidi package it pulls in must load after amsmath and hyperref.
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+\else
+  \usepackage{fontspec} % default font is Latin Modern -> Latin text unchanged
+\fi
+\usepackage{microtype} % char protrusion (+ expansion under pdfTeX): trims overfull boxes
 
 % ---- Page geometry ----------------------------------------------------
 \usepackage[a4paper,left=30mm,right=25mm,top=25mm,bottom=25mm]{geometry}
@@ -87,6 +97,22 @@
   pdftitle={TimeLens: On-Device Detection and Retrieval-Grounded Bilingual Q&A for the Grand Egyptian Museum},
   pdfauthor={Ali Ashraf, Amr Ahmed, Malak Alaa, Omar Ahmed, Omar Wagih, Rawan Hesham}
 }
+
+% ---- Native Arabic support (XeLaTeX/LuaLaTeX only; load LAST) ----------
+% polyglossia pulls in bidi, which must come after amsmath and hyperref. Amiri
+% (static TTF shipped with TeX Live) gives high-quality naskh; numerals=maghrib
+% keeps Western digits so Latin tokens (e.g. YOLOv8n) and metrics stay
+% consistent. Wrap Latin runs inside Arabic text in \textenglish{...}.
+\ifPDFTeX\else
+  \usepackage{polyglossia}
+  \setdefaultlanguage{english}
+  \setotherlanguage[numerals=maghrib]{arabic}
+  \newfontfamily\arabicfont{Amiri-Regular.ttf}[
+    BoldFont       = Amiri-Bold.ttf,
+    ItalicFont     = Amiri-Italic.ttf,
+    BoldItalicFont = Amiri-BoldItalic.ttf,
+    Script         = Arabic]
+\fi
 
 % ---- Small helpers ----------------------------------------------------
 \newcommand{\TimeLens}{\textsc{TimeLens}}
