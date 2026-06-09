@@ -94,7 +94,7 @@ requirements engineering here explicitly balances all four.
         Detector Training
             & NVIDIA GTX 1650 Ti (4GB) \\
         RAG Experiments
-            &  NVIDIA RTX 3050 Laptop (4GB) \\ 
+            &  NVIDIA RTX 3050 Laptop (4GB) \\
         Production Serving
             &  RunPod NVIDIA RTXA5000 (24GB) \\
         \bottomrule
@@ -463,8 +463,7 @@ rather than raw anchors, removing any post-processing decode step on the device.
 confidence and geometry filter (global threshold $0.75$, raised to $0.90$ for the
 visually near-identical Statue of Siptah) then keeps only trustworthy detections, which
 are tracked and drawn as overlays; tapping one opens the artifact's information and the
-RAG chat. Running NMS inside the model keeps per-frame latency at roughly
-30--60\,ms on a mid-tier Android phone.
+RAG chat.
 
 \begin{figure}[htbp]
 \centering
@@ -511,9 +510,7 @@ which artifact is in view; identity is established by the calibrated on-device
 detector. Gemma is asked only to narrate \emph{retrieved} museum context after an
 artifact is known. This grounding contract keeps the language layer aligned with
 museum-safe behavior: if the relevant facts are not in the retrieved context, the
-model is instructed to say so rather than invent them. Backend re-verification of the
-on-device label is supported by the architecture but is not required in the deployed
-path.
+model is instructed to say so rather than invent them.
 
 \section{Production Deployment Strategy}
 
