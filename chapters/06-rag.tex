@@ -160,10 +160,8 @@ Metadata injection in prompt				& Each retrieved chunk is presented with its art
 Language-separated collections
 (\texttt{gem\_en}/\texttt{gem\_ar})			& Replaced the single mixed-language collection. English queries now receive only English context and Arabic queries only Arabic context, eliminating cross-language retrieval confusion.\\
 Query classifier with metadata filtering	& Structured questions (location, period, material) are routed to exact field filtering instead of similarity search. An Arabic "limestone statues" query that previously returned no results now correctly returns all matching artifacts.\\
-Trimmed system prompt
-($\sim$500$\rightarrow$250 chars)			& $\sim$1--2\,s saved per query.\\
 Mode-specific \texttt{num\_predict}
-(Camera 750 / Text 900)						& $\sim$3--5\,s saved on camera-mode queries by avoiding over-generation for focused artifact questions.\\
+(Camera 750-1100 / Text 900-1200)						& $\sim$3--5\,s saved on camera-mode queries by avoiding over-generation for focused artifact questions.\\
 Mode-specific \texttt{top\_k}
 (Camera 4 / Text 8)							& $\sim$1--2\,s saved per camera query. Camera mode retrieves exactly the artifact's chunks; text mode retrieves enough for multi-artifact questions.\\
 Flash Attention
