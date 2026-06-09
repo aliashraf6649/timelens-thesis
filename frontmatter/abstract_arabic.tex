@@ -6,26 +6,24 @@
 %  Latin technical tokens are wrapped in \textenglish{...} so they render
 %  left-to-right in Latin Modern; numerals=maghrib keeps digits Western.
 % =====================================================================
-\ifPDFTeX
 
+\ifPDFTeX
 \chapter*{Abstract (Arabic)}
 \addcontentsline{toc}{chapter}{Abstract (Arabic)}
 \noindent\textit{The Arabic-language abstract is typeset with native Arabic and
 requires compilation with XeLaTeX or LuaLaTeX (\texttt{latexmk main.tex}).}
-
 \else
-
 \begin{otherlanguage}{arabic}
 \chapter*{المستخلص}
 \addcontentsline{toc}{chapter}{\textenglish{Abstract (Arabic)}}
 
-توثّق هذه الرسالة تصميم نظام \textenglish{\TimeLens{}} وتنفيذه وتقييمه، وهو دليلٌ
+توثّق هذه الرسالة تصميم نظام تايم لنز (\textenglish{\TimeLens{}}) وتنفيذه وتقييمه، وهو دليلٌ
 إرشاديٌّ للأجهزة المحمولة مدعومٌ بالذكاء الاصطناعي والواقع المعزَّز، ومخصَّصٌ
 للمتحف المصري الكبير (\textenglish{GEM}). فبمجرّد توجيه الهاتف نحو إحدى القطع
 المعروضة، يرى الزائرُ القطعةَ الأثرية وقد جرى التعرّف عليها في الزمن الحقيقي،
 ويمكنه طرح أسئلة متابعة تُجاب بالعربية أو الإنجليزية. ويتصدّى هذا العمل لثلاث
 مشكلات ترتبط تحديدًا بالتشغيل داخل قاعات العرض: التشابه البصري الدقيق بين
-51 قطعة أثرية مُفهرَسة (كثيرٌ منها تماثيل رمسيسية شبه متطابقة)، والفجوة بين بيانات
+\textenglish{51} قطعة أثرية مُفهرَسة (كثيرٌ منها تماثيل رمسيسية شبه متطابقة)، والفجوة بين بيانات
 التدريب المنسَّقة وظروف التصوير بكاميرا الهاتف المحمول، وخطر أن يذكر الدليلُ
 الذكيُّ «حقائق» تاريخية لا يستطيع إسنادها.
 
@@ -41,7 +39,7 @@ requires compilation with XeLaTeX or LuaLaTeX (\texttt{latexmk main.tex}).}
 (\textenglish{RAG}) ومُسنَدٌ إلى قاعدة معرفة من 108 سجلات في \textenglish{ChromaDB}؛
 وقد اختار تقييمٌ منهجيٌّ لسبعة نماذج لغوية مرشَّحة النموذجَ
 \textenglish{Gemma 4 E2B (Q4\_K\_M)}، كما خفّض تحسينٌ من عشر خطوات زمنَ الاستجابة
-الكلي من أكثر من 30 ثانية إلى نحو 10 ثوانٍ. ويُدمَج الإسهامان معًا في تطبيق
+الكلي من أكثر من \textenglish{30} ثانية إلى نحو \textenglish{10} ثوانٍ. ويُدمَج الإسهامان معًا في تطبيق
 \textenglish{Flutter} جاهزٍ للإنتاج، مع واجهة ثنائية اللغة، وتقييدٍ حسب موقع
 المتحف، وخاصيةِ تحويل النص إلى كلام.
 
@@ -52,18 +50,10 @@ requires compilation with XeLaTeX or LuaLaTeX (\texttt{latexmk main.tex}).}
 التوزيع. ويتضمّن المستند ملاحظاتٍ لإعادة الإنتاج، وبيانًا للأخلاقيات والتحيُّز،
 وإفصاحًا رسميًا عن استخدام الذكاء الاصطناعي التوليدي.
 
-\begin{insightbox}[الفكرة الجوهرية]
-لا يُبنى الدليلُ المتحفيُّ الموثوق بزيادة تعقيد النموذج بقدر ما يُبنى بإسناده إلى
-مصدر موثوق: فالتوسيمات النظيفة تجعل الكاشفَ العاملَ على الجهاز جديرًا بالثقة،
-والتوليدُ المُسنَد إلى الاسترجاع يُبقي النموذج اللغوي ملتزمًا بالوقائع. وتنبع قيمة
-\textenglish{\TimeLens{}} من انضباط البيانات وإسنادها، لا من نموذج أكبر.
-\end{insightbox}
-
 \vspace{1.2em}
 \noindent\textbf{الكلمات المفتاحية:} كشف الأجسام على الجهاز؛ \textenglish{YOLOv8n}؛
 \textenglish{TensorFlow Lite}؛ التوليد المعزَّز بالاسترجاع (\textenglish{RAG})؛
 \textenglish{Gemma}؛ \textenglish{ChromaDB}؛ الإجابة عن الأسئلة ثنائية اللغة؛
 الواقع المعزَّز؛ \textenglish{Flutter}؛ حوسبة التراث الثقافي؛ المتحف المصري الكبير.
 \end{otherlanguage}
-
 \fi
