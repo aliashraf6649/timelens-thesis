@@ -1,6 +1,7 @@
 # LaTeX build artifacts
 *.aux
 *.bbl
+*.bcf
 *.blg
 *.fdb_latexmk
 *.fls
@@ -9,6 +10,15 @@
 *.log
 *.lot
 *.out
+*.run.xml
 *.toc
+*.xdv
 *.synctex.gz
+*.synctex(busy)
 main.pdf
+
+# Editor / OS / FUSE-mount cruft
+.fuse_hidden*
+.DS_Store
+*~
+*.swp
