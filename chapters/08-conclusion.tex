@@ -23,17 +23,15 @@ real-world capture conditions.
 
 \section{Future Work}
 
-\paragraph{Detection.} Split the dataset by source video rather than by frame to remove
-frame leakage; capture and annotate a phone-camera \emph{deployment-distribution} test
-set for honest field metrics; apply stronger augmentation for domain shift; and
-re-label or expand the remaining long-tail classes.
+\paragraph{Dataset.} Expand the dataset significantly by capturing and annotating additional museum artifacts scaling the dataset to eventually cover all artifacts in the museum.
+
+\paragraph{Detection.} Further improve the inference speed of the detection model. While the current system is already fast enough to provide a smooth user experience, further optimization could enable more real-time performance and improve the model's ability to track subtle changes in artifact locations and bounding boxes between frames.
 
 \paragraph{Retrieval-augmented guide.} Expand the closed knowledge base; replace or
 augment the keyword query classifier with a learned intent model; add conversational
 memory across turns; and build index health-audit and maintenance tooling so the
 knowledge base can be updated and validated routinely as the collection grows.
 
-\paragraph{System.} Optionally enable backend re-verification (the \texttt{/predict}
-path) for low-confidence detections; add explainable detection overlays; and conduct
-primary user studies (including System Usability Scale evaluation) in live museum
+\paragraph{System.} Conduct primary user studies (including System Usability Scale evaluation) in live museum
 conditions to quantify learning outcomes and long-horizon experience quality.
+
