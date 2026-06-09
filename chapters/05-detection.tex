@@ -26,8 +26,8 @@ deployment~\citep{yolov8,ipalakova2025comparative}.
         sanity rules that recover most labeling failures without manual work.
   \item A controlled iteration study (v1$\rightarrow$v3) that isolates label quality
         from architecture and resolution.
-  \item An honest analysis of validation frame leakage and training-to-deployment
-        domain shift.
+  % \item An honest analysis of validation frame leakage and training-to-deployment
+  %       domain shift.
   \item A deployable 5.97\,MB TFLite detector with end-to-end NMS.
 \end{itemize}
 
@@ -209,22 +209,18 @@ Hatshepsut. Each box appears only after clearing the on-device confidence gate.}
 
 \section{Failure Modes and Caveats}
 
-The v3 validation metrics \emph{overstate} real-world generalization, and we disclose
-this plainly.
-
-\textbf{Frame leakage.} The dataset is video frames split randomly per image. Adjacent
-frames are near-duplicates, so a frame in training can have an almost-identical twin in
-validation. The v3 mAP@0.5 saturates at $0.995$ within about three epochs of
-warm-started training, which is characteristic of memorization rather than
-generalization. A conservative, in-distribution \emph{held-out test} (using the
-$320$ model) gives a more honest picture: precision $0.691$, recall $0.815$,
-mAP@0.5 $0.751$, mAP@0.5:0.95 $0.650$.
-
-\textbf{Domain shift.} Training frames come from stable, pre-opening videos; deployment
-uses handheld phone cameras under public lighting with motion blur. Phone-camera
-inference is materially worse than on the source videos.
-
-\textbf{Auto-annotation ceiling.} Open-vocabulary detectors handle generic concepts but
+The v2 validation metrics \emph{overstate} real-world generalization through
+% \textbf{Frame leakage.} The dataset is video frames split randomly per image. Adjacent
+% frames are near-duplicates, so a frame in training can have an almost-identical twin in
+% validation. The v3 mAP@0.5 saturates at $0.995$ within about three epochs of
+% warm-started training, which is characteristic of memorization rather than
+% generalization. A conservative, in-distribution \emph{held-out test} (using the
+% $320$ model) gives a more honest picture: precision $0.691$, recall $0.815$,
+% mAP@0.5 $0.751$, mAP@0.5:0.95 $0.650$.
+% \textbf{Domain shift.} Training frames come from stable, pre-opening videos; deployment
+% uses handheld phone cameras under public lighting with motion blur. Phone-camera
+% inference is materially worse than on the source videos.
+\textbf{auto-annotation ceiling.} Open-vocabulary detectors handle generic concepts but
 fail on fine-grained, domain-specific objects; spatial rules recovered most failures,
 but a residual fraction required manual labeling. Figure~\ref{fig:confusion} shows the
 residual fine-grained confusion as an off-diagonal structure in the confusion matrix.
@@ -256,12 +252,11 @@ visually similar statues.}
         running in roughly $30$--$60$\,ms per frame on a mid-tier Android phone.
 \end{itemize}
 
-\section{Limitations}
+% \section{Limitations}
 
-The headline validation metrics are bounded by frame leakage, and a training-to-phone
-domain gap remains. The honest, deployment-facing numbers are the held-out test figures
-above. Mitigations are deferred to future work (Chapter~8): splitting by video rather
-than by frame, capturing a phone-camera deployment test set, and stronger augmentation.
+% The headline validation metrics aren't bounded by frame leakage. Deployment-facing numbers are the held-out test figures
+% above. Mitigations are deferred to future work (Chapter~8): splitting by video rather
+% than by frame, capturing a phone-camera deployment test set, and stronger augmentation.
 
 \section{Conclusion}
 

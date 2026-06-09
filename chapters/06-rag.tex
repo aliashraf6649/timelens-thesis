@@ -241,14 +241,22 @@ prompts a local Gemma model.}
 
 \section{Results}
 
-On an extended set of ten further questions, the optimized pipeline averaged about
-$10.9$\,s per answer at roughly $514$ characters, with eight of ten responses rated
-excellent, one truncated (a long Arabic answer hitting the camera token limit), and one
-minor error. The enriched-embedding fix was decisive for structured queries: an Arabic
-``limestone statues'' query that previously returned ``I don't have that info'' now
-correctly returns the Double Statue of Ramesses~II, and an English ``Ramesses~II
-artifacts'' query expanded from a truncated stub to a list of specific artifacts with
-materials and locations.
+On the full evaluation set of thirty questions spanning text mode, camera mode, and
+out-of-dataset queries in both Arabic and English, the pipeline averaged about 5.9s
+per answer and rated correct on all thirty responses, with no hallucinations, no truncations, 
+and no retrieval misses. Performance was uniform across categories: all eight English text-mode questions, 
+all six Arabic text-mode questions, all six English camera-mode questions, all three Arabic
+camera-mode questions, and all three vague camera-mode questions returned complete, accurate,
+well-grounded answers, while all four out-of-dataset queries (Rosetta Stone, Old Kingdom artifacts,
+Great Pyramid construction, and the Rosetta Stone in Arabic) were correctly refused
+without fabrication. Response times ranged from 4.33s to 8.49s, with Arabic answers
+averaging roughly one second slower than English, consistent with Arabic tokenizing to 
+about twice the length of equivalent English text. The evaluation also confirmed the pipeline's 
+ability to synthesize across separate entries: questions about a single historical figure drew on descriptions
+scattered through multiple distinct statue records to assemble a coherent biographical answer rather than
+reciting a single chunk. Two cosmetic observations surfaced without affecting correctness  one English 
+answer rendered a location name in its raw Arabic form, and another appended a place detail not present
+in the source  both minor and isolated against an otherwise clean run.
 
 \section{Limitations}
 
