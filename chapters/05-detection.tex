@@ -249,7 +249,9 @@ visually similar statues.}
         rejection (global $0.75$, with $0.90$ for the false-positive-prone
         \emph{Siptah Stela}).
   \item \textbf{Footprint.} The deployed asset is FP16 TFLite at \textbf{5.97\,MB},
-        running in roughly $30$--$60$\,ms per frame on a mid-tier Android phone.
+        running in roughly $800$\,ms per frame on a mid-tier Android phone corresponding to a detection update rate of about 1.25 FPS.
+        Although this falls below initial target detection rates, the overall user experience remained smooth because inference was executed asynchronously on a separate thread,
+        allowing the camera preview and user interface to remain responsive and non-blocking throughout operation.
 \end{itemize}
 
 % \section{Limitations}
@@ -259,8 +261,8 @@ visually similar statues.}
 % than by frame, capturing a phone-camera deployment test set, and stronger augmentation.
 
 \section{Conclusion}
-
-For fine-grained museum artifacts, \textbf{label quality is first-order}; architecture
-and resolution are second-order. A compact YOLOv8n trained on clean, hand-verified
-labels yields a deployable, real-time, on-device detector that feeds the rest of the
-\TimeLens{} system.
+% For fine-grained museum artifacts, \textbf{label quality is first-order}; architecture
+% and resolution are second-order. A compact YOLOv8n trained on clean, hand-verified
+% labels yields a deployable, real-time, on-device detector that feeds the rest of the
+% \TimeLens{} system.
+For fine-grained museum artifact detection, \textbf{label quality is a first-order factor}, while model architecture and input resolution are secondary considerations. A compact YOLOv8n model trained on clean, hand-verified annotations demonstrated excellent real-world performance during deployment and field testing. Across all artifact classes included in the dataset, the model produced no observed misclassifications, with detection confidence scores consistently ranging between 75\% and 95\%. These results indicate that the detector is sufficiently accurate and reliable for practical museum deployment as part of the TimeLens system.
